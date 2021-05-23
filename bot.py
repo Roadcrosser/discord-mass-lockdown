@@ -188,7 +188,6 @@ async def perform_lockdown(channel_list, lockdown):
     return ret
 
 
-@bot.event
 async def lockdown(message, args):
     channel_list = parse_channel_list(args)
     if not channel_list:
@@ -203,7 +202,6 @@ async def lockdown(message, args):
     await message.channel.send(ret)
 
 
-@bot.event
 async def unlockdown(message, args):
     channel_list = parse_channel_list(args)
     if not channel_list:
