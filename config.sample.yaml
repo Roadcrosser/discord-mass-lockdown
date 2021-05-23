@@ -1,0 +1,41 @@
+# Bot token
+TOKEN: abalabahaha
+
+# Guild ID
+GUILD_ID: 123456
+
+# Role to allow chat in locked down channels
+AUTHORIZED_ROLE_ID: 123456
+
+# Staff role to initiate mass lockdown (Optional, will always listen to MANAGE_GUILD)
+STAFF_ROLE_ID: null
+
+# Channel to announce lockdowns/unlockdowns in. Set to `null` if unused.
+ANNOUNCE_CHANNEL_ID: 123456
+
+# Announcement messages for lockdown/unlockdown. Set to `null` if unused.
+LOCKDOWN_ANNOUNCEMENT: "This server is currently under mass lockdown. Please be patient."
+UNLOCKDOWN_ANNOUNCEMENT: "This server no longer under mass lockdown. Thank you for your patience."
+
+# Staff channel, only used for announcing bans. Set to `null` if unused.
+# STAFF_CHANNEL_ID: 123456
+
+# Mass lockdown commands
+LOCKDOWN_COMMANDS:
+  - "pls masslockdown"
+  - "+masslockdown"
+  - "!masslockdown"
+
+# Mass unlockdown commands
+UNLOCKDOWN_COMMANDS:
+  - "pls massunlockdown"
+  - "pls unmasslockdown"
+  - "+massunlockdown"
+  - "+unmasslockdown"
+  - "!massunlockdown"
+  - "!unmasslockdown"
+
+
+# Developer options; don't touch
+DEVELOPER_ID: null
+EVAL_COMMAND: null
