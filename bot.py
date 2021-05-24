@@ -5,7 +5,7 @@ bot = discord.Client()
 
 bot.ready = False
 
-with open("config.yaml") as o:
+with open("config.yaml", encoding="utf-8") as o:
     config = yaml.load(o.read(), Loader=yaml.FullLoader)
 
 
