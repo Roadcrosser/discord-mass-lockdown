@@ -149,29 +149,29 @@ async def perform_lockdown(channel_list, lockdown):
             authorized_role_override.send_messages = None
             bot_override.send_messages = None
 
-        # try:
-        for i, u in [
-            (c.guild.default_role, default_role_override),
-            (bot.AUTHORIZED_ROLE, authorized_role_override),
-            (c.guild.me, bot_override),
-        ]:
-            if u.is_empty():
-                u = None
+        try:
+            for i, u in [
+                (c.guild.default_role, default_role_override),
+                (bot.AUTHORIZED_ROLE, authorized_role_override),
+                (c.guild.me, bot_override),
+            ]:
+                if u.is_empty():
+                    u = None
 
-            await c.set_permissions(
-                i,
-                overwrite=u,
-                reason="[Mass {}ockdown]".format("L" if lockdown else "Unl"),
-            )
+                await c.set_permissions(
+                    i,
+                    overwrite=u,
+                    reason="[Mass {}ockdown]".format("L" if lockdown else "Unl"),
+                )
 
-        success_channels.append(str(c.id))
+            success_channels.append(str(c.id))
 
-        if lockdown:
-            bot.LOCKED_DOWN_CHANNELS.add(c.id)
-        elif c.id in bot.LOCKED_DOWN_CHANNELS:
-            bot.LOCKED_DOWN_CHANNELS.remove(c.id)
-        # except:
-        #     fail_channels.append(c.mention)
+            if lockdown:
+                bot.LOCKED_DOWN_CHANNELS.add(c.id)
+            elif c.id in bot.LOCKED_DOWN_CHANNELS:
+                bot.LOCKED_DOWN_CHANNELS.remove(c.id)
+        except:
+            fail_channels.append(c.mention)
 
     ret = "{}ocked down the following channels:\n```\n{}\n```".format(
         "L" if lockdown else "Unl", "\n".join(success_channels)
