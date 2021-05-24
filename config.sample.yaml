@@ -17,9 +17,6 @@ ANNOUNCE_CHANNEL_ID: 123456
 LOCKDOWN_ANNOUNCEMENT: "This server is currently under mass lockdown. Please be patient."
 UNLOCKDOWN_ANNOUNCEMENT: "This server no longer under mass lockdown. Thank you for your patience."
 
-# Staff channel, only used for announcing bans. Set to `null` if unused.
-# STAFF_CHANNEL_ID: 123456
-
 # Mass lockdown commands
 LOCKDOWN_COMMANDS:
   - "pls masslockdown"
