@@ -103,7 +103,7 @@ async def on_message(message):
         and is_public_channel(message.channel)
         # Check for no roles (@everyone counts as a role internally)
         and len(message.author.roles) == 1
-        # Check that mention regex search count exceeds threshold
+        # Check that mention count exceeds threshold
         and len(message.mentions) >= bot.MENTION_THRESHOLD
     ):
         await execute_auto_lockdown(message)
