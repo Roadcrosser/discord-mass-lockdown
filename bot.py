@@ -1,6 +1,5 @@
 import discord
 import datetime
-from discord import channel
 import yaml
 
 bot = discord.Client(
