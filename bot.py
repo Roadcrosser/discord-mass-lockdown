@@ -1,4 +1,6 @@
 import discord
+import datetime
+from discord import channel
 import yaml
 
 bot = discord.Client(
@@ -9,6 +11,25 @@ bot.ready = False
 
 with open("config.yaml", encoding="utf-8") as o:
     config = yaml.load(o.read(), Loader=yaml.FullLoader)
+
+
+def cull_recent_member_cache(ts=None):
+    if bot.RECENT_JOIN_THRESHOLD <= 0:
+        return
+
+    if not ts:
+        ts = datetime.datetime.utcnow()
+
+    cutoff_ts = ts - datetime.timedelta(seconds=bot.RECENT_JOIN_THRESHOLD)
+
+    bot.RECENT_MEMBER_CACHE = [
+        m
+        for m in bot.RECENT_MEMBER_CACHE
+        # It's easier to cull members who leave here than on leave
+        if bot.GUILD.get_member(m.id)
+        # Cutoff is inclusive
+        and m.joined_at >= cutoff_ts
+    ]
 
 
 def setup_bot():
@@ -30,11 +51,27 @@ def setup_bot():
     bot.LOCKDOWN_ANNOUNCEMENT = config["LOCKDOWN_ANNOUNCEMENT"]
     bot.UNLOCKDOWN_ANNOUNCEMENT = config["UNLOCKDOWN_ANNOUNCEMENT"]
 
+    bot.MENTION_THRESHOLD = config["MENTION_THRESHOLD"]
+
+    bot.STAFF_CHANNEL = (
+        bot.GUILD.get_channel(config["STAFF_CHANNEL_ID"]) if bot.GUILD else None
+    )
+
+    bot.RECENT_JOIN_THRESHOLD = config["RECENT_JOIN_THRESHOLD"]
+
     bot.DEVELOPER_ID = config["DEVELOPER_ID"]
 
     bot.LOCKED_DOWN_CHANNELS = set()
 
     bot.ANNOUNCE_MESSAGES = {}
+
+    bot.AUTOLOCKDOWN_IN_PROGRESS = False
+
+    bot.RECENT_MEMBER_CACHE = None
+
+    if bot.RECENT_JOIN_THRESHOLD > 0:
+        bot.RECENT_MEMBER_CACHE = bot.GUILD.members
+        cull_recent_member_cache()
 
 
 @bot.event
@@ -51,12 +88,25 @@ async def on_message(message):
     if (
         not bot.ready
         or message.author.bot
+        or not message.content
         or not message.guild
         or message.guild.id != bot.GUILD.id
     ):
         return
 
-    if message.content and (
+    if (
+        # Check auto-lockdown is enabled
+        bot.MENTION_THRESHOLD > 0
+        # Check auto-lockdown not already in progress
+        and not bot.AUTOLOCKDOWN_IN_PROGRESS
+        # Check for no roles (@everyone counts as a role internally)
+        and len(message.author.roles) == 1
+        # Check that mention regex search count exceeds threshold
+        and len(message.mentions) >= bot.MENTION_THRESHOLD
+    ):
+        await execute_auto_lockdown(message)
+
+    if (
         message.author.guild_permissions.manage_guild
         or message.author.id == bot.DEVELOPER_ID
         or bot.STAFF_ROLE_ID in [r.id for r in message.author.roles]
@@ -66,6 +116,12 @@ async def on_message(message):
                 args = message.content[len(cmd) :].strip()
                 await COMMAND_MAP[cmd](message, args)
                 break
+
+
+@bot.event
+async def on_member_join(member):
+    bot.RECENT_MEMBER_CACHE.append(member)
+    cull_recent_member_cache()
 
 
 def is_public_channel(channel):
@@ -94,6 +150,14 @@ def is_public_channel(channel):
             ]
         ]
     )
+
+
+def get_public_channels():
+    return [
+        c
+        for c in bot.GUILD.text_channels
+        if c.permissions_for(bot.GUILD.me).manage_channels and is_public_channel(c)
+    ]
 
 
 def parse_channel_list(args):
@@ -213,11 +277,7 @@ async def perform_lockdown(channel_list, lockdown):
 async def lockdown(message, args):
     channel_list = parse_channel_list(args)
     if not channel_list:
-        channel_list = [
-            c
-            for c in bot.GUILD.text_channels
-            if c.permissions_for(bot.GUILD.me).manage_channels and is_public_channel(c)
-        ]
+        channel_list = get_public_channels()
 
     async with message.channel.typing():
         ret = await perform_lockdown(channel_list, True)
@@ -241,7 +301,42 @@ async def unlockdown(message, args):
 
     async with message.channel.typing():
         ret = await perform_lockdown(channel_list, False)
+
+    bot.AUTOLOCKDOWN_IN_PROGRESS = False
     await message.channel.send(ret)
+
+
+async def execute_auto_lockdown(message):
+    bot.AUTOLOCKDOWN_IN_PROGRESS = True
+
+    channel_list = get_public_channels()
+
+    staff_channel_accessible = (
+        bot.STAFF_CHANNEL
+        and bot.STAFF_CHANNEL.permissions_for(bot.STAFF_CHANNEL.guild.me).send_messages
+    )
+
+    if staff_channel_accessible:
+        staff_announce_msg = f"{message.author.mention} ({message.author.id}) mentioned `{len(message.mentions)}` members in {message.channel.mention}."
+
+        if bot.RECENT_JOIN_THRESHOLD > 0:
+            cull_recent_member_cache(message.created_at)
+            staff_announce_msg += (
+                f"\nMembers who joined in the last {bot.RECENT_JOIN_THRESHOLD} seconds: "
+                + " ".join([m.mention for m in bot.RECENT_MEMBER_CACHE])
+            )
+
+        staff_announce_msg += (
+            "\n\nNow locking down the following channels: "
+            + " ".join([c.mention for c in channel_list])
+        )
+
+        await bot.STAFF_CHANNEL.send(staff_announce_msg)
+
+    ret = await perform_lockdown(channel_list, True)
+
+    if staff_channel_accessible:
+        await bot.STAFF_CHANNEL.send(ret)
 
 
 _ = None

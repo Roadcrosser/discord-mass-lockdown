@@ -17,6 +17,15 @@ ANNOUNCE_CHANNEL_ID: all
 LOCKDOWN_ANNOUNCEMENT: "This server is currently under mass lockdown. Please be patient."
 UNLOCKDOWN_ANNOUNCEMENT: "This server no longer under mass lockdown. Thank you for your patience."
 
+# Auto-mention threshold (Minimum to fire, inclusive) (set to 0 to disable)
+MENTION_THRESHOLD: 15
+
+# Staff channel - will report auto lockdowns. Set to `null` to disable.
+STAFF_CHANNEL_ID: 123456
+
+# Recent join threshold - When reporting auto lockdowns, will also print a list of members who joined in the last n seconds. (set to 0 to disable)
+RECENT_JOIN_THRESHOLD: 20
+
 # Mass lockdown commands
 LOCKDOWN_COMMANDS:
   - "pls masslockdown"
