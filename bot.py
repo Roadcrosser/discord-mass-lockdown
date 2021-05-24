@@ -97,8 +97,11 @@ async def on_message(message):
     if (
         # Check auto-lockdown is enabled
         bot.MENTION_THRESHOLD > 0
+        and not bot.AUTOLOCKDOWN_IN_PROGRESS
         # Check auto-lockdown not already in progress
         and not bot.AUTOLOCKDOWN_IN_PROGRESS
+        # Check channel is public
+        and is_public_channel(message.channel)
         # Check for no roles (@everyone counts as a role internally)
         and len(message.author.roles) == 1
         # Check that mention regex search count exceeds threshold
