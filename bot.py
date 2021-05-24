@@ -97,7 +97,6 @@ async def on_message(message):
     if (
         # Check auto-lockdown is enabled
         bot.MENTION_THRESHOLD > 0
-        and not bot.AUTOLOCKDOWN_IN_PROGRESS
         # Check auto-lockdown not already in progress
         and not bot.AUTOLOCKDOWN_IN_PROGRESS
         # Check channel is public
