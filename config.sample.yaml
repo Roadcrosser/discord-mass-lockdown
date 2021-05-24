@@ -10,8 +10,8 @@ AUTHORIZED_ROLE_ID: 123456
 # Staff role to initiate mass lockdown (Optional, will always listen to MANAGE_GUILD)
 STAFF_ROLE_ID: null
 
-# Channel to announce lockdowns/unlockdowns in. Set to `null` if unused.
-ANNOUNCE_CHANNEL_ID: 123456
+# Channel to announce lockdowns/unlockdowns in. Set to `all` to announce in every locked down channel. Set to `null` if unused.
+ANNOUNCE_CHANNEL_ID: all
 
 # Announcement messages for lockdown/unlockdown. Set to `null` if unused.
 LOCKDOWN_ANNOUNCEMENT: "This server is currently under mass lockdown. Please be patient."

@@ -1,7 +1,9 @@
 import discord
 import yaml
 
-bot = discord.Client()
+bot = discord.Client(
+    intents=discord.Intents(guilds=True, guild_messages=True, members=True)
+)
 
 bot.ready = False
 
@@ -18,9 +20,12 @@ def setup_bot():
 
     bot.STAFF_ROLE_ID = config["STAFF_ROLE_ID"]
 
-    bot.ANNOUNCE_CHANNEL = (
-        bot.GUILD.get_channel(config["ANNOUNCE_CHANNEL_ID"]) if bot.GUILD else None
-    )
+    bot.ANNOUNCE_CHANNEL = config["ANNOUNCE_CHANNEL_ID"]
+
+    if bot.ANNOUNCE_CHANNEL != "all":
+        bot.ANNOUNCE_CHANNEL = (
+            bot.GUILD.get_channel(bot.ANNOUNCE_CHANNEL) if bot.GUILD else None
+        )
 
     bot.LOCKDOWN_ANNOUNCEMENT = config["LOCKDOWN_ANNOUNCEMENT"]
     bot.UNLOCKDOWN_ANNOUNCEMENT = config["UNLOCKDOWN_ANNOUNCEMENT"]
@@ -28,6 +33,8 @@ def setup_bot():
     bot.DEVELOPER_ID = config["DEVELOPER_ID"]
 
     bot.LOCKED_DOWN_CHANNELS = set()
+
+    bot.ANNOUNCE_MESSAGES = {}
 
 
 @bot.event
@@ -58,7 +65,7 @@ async def on_message(message):
             if message.content.lower().startswith(cmd):
                 args = message.content[len(cmd) :].strip()
                 await COMMAND_MAP[cmd](message, args)
-                return
+                break
 
 
 def is_public_channel(channel):
@@ -114,21 +121,36 @@ def parse_channel_list(args):
     ]
 
 
-async def announce_lockdown(lockdown):
-    if (
-        not bot.ANNOUNCE_CHANNEL
-        or not bot.ANNOUNCE_CHANNEL.permissions_for(
-            bot.ANNOUNCE_CHANNEL.guild.me
-        ).send_messages
-    ):
+async def announce_lockdown(channel_list, lockdown):
+    if not bot.ANNOUNCE_CHANNEL:
         return
 
-    message = bot.LOCKDOWN_ANNOUNCEMENT if lockdown else bot.UNLOCKDOWN_ANNOUNCEMENT
+    to_announce = channel_list
+    if bot.ANNOUNCE_CHANNEL != "all":
+        to_announce = [bot.ANNOUNCE_CHANNEL]
 
-    if not message:
-        return
+    for c in to_announce:
+        if not c.permissions_for(c.guild.me).send_messages:
+            continue
 
-    await bot.ANNOUNCE_CHANNEL.send(message)
+        message = bot.LOCKDOWN_ANNOUNCEMENT if lockdown else bot.UNLOCKDOWN_ANNOUNCEMENT
+
+        if message:
+            msg = await c.send(message)
+            if c.permissions_for(c.guild.me).manage_messages and lockdown:
+                try:
+                    await msg.pin(reason="[Mass Lockdown Announcement]")
+                    bot.ANNOUNCE_MESSAGES[c.id] = msg
+                except:
+                    pass
+
+        if c.permissions_for(c.guild.me).manage_messages and not lockdown:
+            pinned_msg = bot.ANNOUNCE_MESSAGES.pop(c.id, None)
+            if pinned_msg:
+                try:
+                    await pinned_msg.unpin(reason="[Mass Unlockdown Announcement]")
+                except:
+                    pass
 
 
 async def perform_lockdown(channel_list, lockdown):
@@ -164,7 +186,7 @@ async def perform_lockdown(channel_list, lockdown):
                     reason="[Mass {}ockdown]".format("L" if lockdown else "Unl"),
                 )
 
-            success_channels.append(str(c.id))
+            success_channels.append(c)
 
             if lockdown:
                 bot.LOCKED_DOWN_CHANNELS.add(c.id)
@@ -174,7 +196,7 @@ async def perform_lockdown(channel_list, lockdown):
             fail_channels.append(c.mention)
 
     ret = "{}ocked down the following channels:\n```\n{}\n```".format(
-        "L" if lockdown else "Unl", "\n".join(success_channels)
+        "L" if lockdown else "Unl", "\n".join([str(c.id) for c in success_channels])
     )
 
     if fail_channels:
@@ -183,7 +205,7 @@ async def perform_lockdown(channel_list, lockdown):
         )
 
     if success_channels:
-        await announce_lockdown(lockdown)
+        await announce_lockdown(success_channels, lockdown)
 
     return ret
 
